@@ -1,0 +1,20 @@
+---
+- name: Add a line to the file
+  hosts: dtln-vsaas-strm
+  become: yes
+
+  tasks:
+  - name: Put line to file
+    lineinfile:
+      path: /data/cctv/etc/streamer.conf
+        #regexp: '^zabbix: ["10.20.100.247","10.20.100.245","178.161.137.14", 2085],'
+        #state: absent
+      regexp: 'zabbix:[\W\w].*'
+        #state: absent
+        #insertafter: '^zabbix'
+      line: '        zabbix: ["10.20.100.245", 2085],'
+#   register: presence
+# - name: print value   
+#   debug: 
+#     msg: "{{ presence }}" 
+

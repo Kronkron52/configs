@@ -1,0 +1,66 @@
+Docker introduction
+#Перед установкой добавить стабильные репы на сервер
+apt-cache policy apt-transport-https
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt update
+sudo apt install docker-ce
+
+docker components
+docker engine # программа докер
+docker container # контейнер с ОС
+docker image # image
+dockerfile # параметры
+
+docker -v
+sudo docker # докер  запускается только с судо
+sudo usermod -aG docker $USER # добавить в группу докера юзера, тогда не надо будет судо делать
+
+docker ps # показать  бегущие контейнера
+docker ps -a
+
+docker run hello-world # скачать контейнер и запустить
+docker images # показать какие есть images
+
+docker hub # репы имеджей
+
+docker search tomcat
+docker pull tomcat # скачать имедж
+
+docker run -it -p 1234:8080 tomcat # запустить контейнер и перенаправить порты
+docker run -d -p 1234:8080 # запустить как демон
+1234:8080 # перенаправить порты с 8080 на 1234
+docker run -d -p 1235:8080 #запустить на другой порт
+docker search nginx
+docker run -d -p 4444:80 nginx # скачать и запустить
+docker rmi hello-world # удалить имедж  не удаляет если он активен
+docker rm container #  удалить контейнер
+#---------------------------------------------------------------------
+#
+#docker file
+#
+#
+#---------------------------------------------------------------------/
+FROM ubuntu:16.04 # название имедж
+
+RUN apt-get -y update # запуститть две команды на имедже
+RUN apt-get -y install apache2
+
+RUN echo 'Hello World from Docker!' > /var/www/html/index.html #написать экзо в индекс
+
+
+CMD ["/usr/sbin/apache2ctl", "-D","FOREGROUND"] #запусить как демон
+EXPOSE 80 # на 80 порт
+#-----------------------------------------------------------------------------
+
+docker build -t name:v1 .  #создать докер файл  в текущей дериктории
+docker run -d -p 7777:80 name:v1 # запустить имедж
+
+docker tag name:v1 name:copy # делают копию и мненять тэг имеджа
+docker exec -ti container_id /bin/bash # логин на контейнер
+
+docker commit container_id name:v3 # создать имедж из бегущего контейнера
+docker run -d -p 7878:80 name:v3 # запуститть контейнер
+
+docker login
+docker push # пушить в репу на докер хабе

@@ -1,0 +1,15 @@
+Lesson 4
+
+
+ps aux | grep telegram-desktop | grep -v grep | awk '{print $2}'
+показывате только пид процесса
+
+cat /etc/passwd | awk -F: '{print $1}'
+показать столбец без разделителя
+
+cat /Var/log/nginx/access.log | grep "06/Jul/2022" | grep "127.0.0.1" | awk '{print $7,$9}' | column -t
+
+sed -i "d" - удаляет нужную строчку
+sed -i "s" - замена текста
+sed -i "s/PermitRootLogn yes/PermitRootLogn no/" /etc/ssh/sshd_config
+awk -vDate=$(date -d'now-10 minutes' +[%d/%b/%Y:%H:%M:%S) '$4 > Date {print $0}' /var/log/nginx.log

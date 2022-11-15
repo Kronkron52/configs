@@ -1,0 +1,82 @@
+Lesson 6
+
+
+SysVinit
+Управляет загрузкой при помощи скриптов
+Скрипты расположены в /etc/init.d
+
+Умеет разделять очередность выполнения скриптов по runlevel
+
+Systemd
+Система инициализации и управления службами
+
+Распараллеливает процесс запуска, что приводит к высокой скорости загрузки
+
+[Unit]
+Description=<описание юнита>
+After=<после чего он должен загрузиться>
+Requires=<что ему требуется для запуска>
+
+[<тип юнита>]
+<параметры юнита>
+
+[install]
+WantedBy=<на каком этапе запускается автоматически>
+
+
+конфиги лежат
+/usr/lib/systemd/system
+
+/etc/sysmtemd/system
+
+~/.config/systemd/user
+
+
+systemctl edit docker.service
+редактирует юнит, проверяет конфиги, и делает релоад
+systemctl cat docker.service
+посмотреть юнит
+
+systemd управлчяет временем при помощи сервиса systemd-timesyncd
+
+timedatectl - утилита для управления временем.
+
+timedatectl set-ntp 1 включить синхронизацию по времени с нтп сервером
+timedatactl status
+timedatectl set-timezone Asia/irkutsk
+date показывает локальное время
+
+systemctl status systemd-networkd сеть
+systemctl is-enabled проверить добавился ли сервис в автозагрузку
+#######
+vim /etc/systemd/system/
+[Unit]
+After=network.target - запускается после поднятия сети
+
+[Service]
+ExecStart=/opt/web_server_slurm/web_server_py - где находится сам сервис
+Enviroment="FLASK_DEBUG=1" - переменная дебага
+User=web - с какого пользака будет запускаться сервис
+
+[Install]
+WantedBy=multi-user.target
+##############
+
+crond
+/etc/crontab
+структура файла
+#minute hour day month dayofweek command
+30       3    *    *      mon     cat/etc/test.txt
+systemd.timer умеет всё то же самое и немного больше
+
+#!/bin/bash
+
+
+echo -e "$(date)\n"
+echo "CPU:"
+ps -eo pid,cmd,%cpu --sort=%cpu | tail -10
+
+echo -e "\nMemory"
+ps -eo pid,cmd,%mem --sort=%mem | tail -10
+
+echo -e "\n------------\n"

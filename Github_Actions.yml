@@ -1,0 +1,151 @@
+Github Actions
+
+.github/workflows # сюда закидывать файлы для github actions
+/.github/workflows/my-pipline.yml
+
+my-pipline.yml
+#------------------------------------------
+#Github Action part 1
+#
+#
+#30.10.22 by Edward
+#---------------------------------------------
+name: github-actions-one #без пробелов, имя CI
+
+om:
+  push:          #запускаются события на пуш в мастер ветку
+    branches:
+      - master
+
+jobs:
+  my_testing:                # task one
+    runs-on: ubuntu-latest  # на чём заспускать джобу
+    steps:                   #шаги выполнения
+      - name: Print Hello message
+        run: echo "Hello World from testing job"
+
+  my-deploy:                # task two
+    runs-on: ubuntu-latest
+    steps:
+      - name: print Hello message
+        run: echo "Hello world from deploy job"
+
+#------------------------------------------
+#Github Action part 2
+#
+#
+#30.10.22 by Edward
+#---------------------------------------------
+name: github-actions-two #без пробелов, имя CI
+
+om:
+  push:          #запускаются события на пуш в мастер ветку
+    branches:
+      - master
+
+jobs:
+  my_testing:                # task one
+    runs-on: ubuntu-latest  # на чём заспускать джобу
+    steps:                   #шаги выполнения
+      - name: Print Hello message
+        run: echo "Hello World from testing job"
+
+  my-deploy:                # запускатеся только после окончания первого таска
+    runs-on: ubuntu-latest
+    needs: [my_testing] # запускается только после таска "тестинг"
+    steps:
+      - name: print Hello message
+        run: echo "Hello world from deploy job"
+
+#------------------------------------------
+#Github Action part 3
+#
+#
+#30.10.22 by Edward
+#---------------------------------------------
+name: github-actions-three #без пробелов, имя CI
+
+om:
+  push:          #запускаются события на пуш в мастер ветку
+    branches:
+      - master
+
+jobs:
+  my_testing:                # task one
+    runs-on: ubuntu-latest  # на чём заспускать джобу
+    steps:                   #шаги выполнения
+      - name: Print Hello message
+        run: echo "Hello World from testing job"
+
+  my-deploy:                # task two
+    runs-on: ubuntu-latest
+    steps:
+      - name: print Hello message
+        run: echo "Hello world from deploy job"
+
+#------------------------------------------
+#Github Action part 4
+#
+#
+#30.10.22 by Edward
+#---------------------------------------------
+name: github-actions-four #без пробелов, имя CI
+env:                      # глабольные переменные в гитхаб_акшин
+  APPLICATION_NAME       : "MyFlask"
+  DEPLOY_PACKAGE_NAME    : "flask-deploy-ver-${{ github.sha }}" #хэш коммита
+om:
+  push:          #запускаются события на пуш в мастер ветку
+    branches:
+      - master
+
+jobs:
+  my_testing:                # task one
+    runs-on: ubuntu-latest   # на чём заспускать джобу
+    steps:                   #шаги выполнения
+      - name: Print Hello message
+        run: echo "Hello World from testing job"
+
+      - name: Execure few commands
+        run:
+          echo "Hello Message1"
+          echo "Hellow Message2"
+          echo "Application name: ${{ env.APPLICATION_NAME }}" #распечатать переменные
+
+      - name: List current folder # посмотреть папку
+        run: ls -la
+
+      - name: Git clome my repo
+        uses: actions/checkout@v1  #клонируют всю репу
+
+      - name: List current folder   #смотрим папку
+        run: ls -la
+
+  my-deploy:                # запускатеся только после окончания первого таска
+    runs-on: ubuntu-latest
+    needs: [my_testing] # запускается только после таска "тестинг"
+    env:
+      VAR1: "This is job level variable1" #глобальные переменныей для джобы деплой
+      VAR2: "This is job level variable2"
+
+    steps:
+      - name: print Hello message
+        run: echo "Hello world from deploy job"
+
+      - name: print evn vars
+         run:
+           echo " var1 = ${{ env.VAR1 }}"
+           echo " var1 = ${{ env.VAR2 }}"
+           echo " var3 " ${{ LOCAL_VAR}}
+        env:                             #локальная переменная
+          LOCAL_VAR: local variable
+
+
+      - name: Priting Deploy package
+        run: echo "Deploy pakcage name is ${{ env.APPLICATION_NAME }}"
+
+      - name: Lets test some packages if they are here 1
+        run: aws --version
+
+      - name: Lets test some packages if they are here 2
+        run: zip --version
+#-----------------------------------------------------------------------------

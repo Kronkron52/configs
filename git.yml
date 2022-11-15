@@ -1,0 +1,60 @@
+#Заметки по GIT
+
+git #проверить есть ли
+git --version
+gitconfig
+git config --global user.name "username" #можно сделать в локальной репе
+git config --global user.email "email" #свои креды
+git config -l
+git init . #в этой деректитории сдлеать бд гит
+git status #посмотреть статус
+git add # add fail
+git commit -m # закинуть на ветку
+git log #list log commit
+git log -1 p #показывает подробности первого лога
+git checkout # вернуть фаил после add
+git restore # вернуть фаил после add
+git diff --staged # показывает что записано в лог
+.gitingnore # игнорирует то что внутри
+git clone URL # скачать репу
+git push # пушнуть в репу
+ssh-keygen # сгенерировать пару ключей
+git remote -v # покзаать ссылку
+git remote set-url URL # поменять ссылку на гит
+
+#Branch
+Master #главная ветка
+Branch #вторая ветка, которая не трогаем мастер
+git branch # показать ветки
+git branch -d fix_error # del branch
+git branch -D fix_error # удалить бранч с комитом
+git branch fix_error # создать сплит ветку
+
+##checkout
+git checkout fix_error # перейти на ветку
+git checkout master # перейти на ветку
+git checkout -b fix_error # создать и перейти сразу на branch
+git checkout и номер хеша ( хэш видно при логе )  #  перейти на старую версию
+git checkout master # вернуться обратно
+git checkout v1.0.0
+
+git commit --amend  # изменить последний коммит
+git megre fix_error # объеденить ветку с мастером
+
+git reset --hard HEAD~2 # на два комита вернуться назад
+git reset --soft HEAD~3 # удалить историю комитов из лога
+
+git push --set-upstream origin name_taks # запушить бренч на сервер GIT
+git push origin --delete name_taks # удалить удалённо бренч
+git push origin --delete v1.1.1 # удалить тэг из репы
+git push origin v1.0.0 # пушнуть ТЭГ
+
+##################################################
+Git tags ####################
+################################
+#################################
+git log --pretty=oneline # посмотреть хэши и  коммиты
+git tag # показывает какие тэги есть
+git tag v1.0.0 # сделать тэг в текущем коммите
+git tag -d v1.1.0 # удалить ТЭГ локально
+git tag -a v1.0.5 ХЭШ коммита # добавить ТЭГ на коммит
