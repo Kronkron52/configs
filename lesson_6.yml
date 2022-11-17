@@ -2,15 +2,14 @@ Lesson 6
 
 
 SysVinit
-Управляет загрузкой при помощи скриптов
-Скрипты расположены в /etc/init.d
+#Управляет загрузкой при помощи скриптов
+#Скрипты расположены в /etc/init.d
 
-Умеет разделять очередность выполнения скриптов по runlevel
+#Умеет разделять очередность выполнения скриптов по runlevel
 
 Systemd
-Система инициализации и управления службами
-
-Распараллеливает процесс запуска, что приводит к высокой скорости загрузки
+#Система инициализации и управления службами
+#Распараллеливает процесс запуска, что приводит к высокой скорости загрузки
 
 [Unit]
 Description=<описание юнита>
@@ -24,7 +23,7 @@ Requires=<что ему требуется для запуска>
 WantedBy=<на каком этапе запускается автоматически>
 
 
-конфиги лежат
+#конфиги лежат
 /usr/lib/systemd/system
 
 /etc/sysmtemd/system
@@ -33,35 +32,35 @@ WantedBy=<на каком этапе запускается автоматиче
 
 
 systemctl edit docker.service
-редактирует юнит, проверяет конфиги, и делает релоад
+#редактирует юнит, проверяет конфиги, и делает релоад
 systemctl cat docker.service
-посмотреть юнит
+#посмотреть юнит
 
 systemd управлчяет временем при помощи сервиса systemd-timesyncd
 
 timedatectl - утилита для управления временем.
 
-timedatectl set-ntp 1 включить синхронизацию по времени с нтп сервером
+timedatectl set-ntp 1 #включить синхронизацию по времени с нтп сервером
 timedatactl status
 timedatectl set-timezone Asia/irkutsk
-date показывает локальное время
+date #показывает локальное время
 
 systemctl status systemd-networkd сеть
 systemctl is-enabled проверить добавился ли сервис в автозагрузку
 #######
 vim /etc/systemd/system/
 [Unit]
-After=network.target - запускается после поднятия сети
+After=network.target #- запускается после поднятия сети
 
 [Service]
-ExecStart=/opt/web_server_slurm/web_server_py - где находится сам сервис
-Enviroment="FLASK_DEBUG=1" - переменная дебага
-User=web - с какого пользака будет запускаться сервис
+ExecStart=/opt/web_server_slurm/web_server_py #- где находится сам сервис
+Enviroment="FLASK_DEBUG=1" #- переменная дебага
+User=web #- с какого пользака будет запускаться сервис
 
 [Install]
 WantedBy=multi-user.target
 ##############
-
+      
 crond
 /etc/crontab
 структура файла
