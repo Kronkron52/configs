@@ -26,4 +26,10 @@ statefulSet # компонент для databases  несколько дб
 container runtime #должен быть на всех надох
 kubelet #для получения команд от мастера
 kuby proxy # для инет
-kubectl
+kubectl edit deployment nginx-depl # откроется ямл манифест деплоймента
+kubectl logs pod_name
+kubectl discrabe pod [pod name]
+kubectl exec -it pod_name --bin/bash
+
+
+
