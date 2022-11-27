@@ -33,3 +33,7 @@ CRI # контейнер рантайм
 смена CRI
 /etc/crictl.yaml # меня тут сокет на контейнерД
 systemctl restart containerd kubelet
+Helm #— системы управления пакетами Kubernetes
+#----------------------------------------------
+$ kompose convert #создаёт файлы манифесты kubernetes на основе имебщихся 
+$ rm docker-compose.yaml # после конвертации можно удалить файлы докер
