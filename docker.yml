@@ -37,18 +37,14 @@ docker rmi hello-world # удалить имедж  не удаляет если
 docker rm container #  удалить контейнер
 #---------------------------------------------------------------------
 #
-#docker file
+#                           docker file
 #
 #
 #---------------------------------------------------------------------/
 FROM ubuntu:16.04 # название имедж
-
 RUN apt-get -y update # запуститть две команды на имедже
 RUN apt-get -y install apache2
-
 RUN echo 'Hello World from Docker!' > /var/www/html/index.html #написать экзо в индекс
-
-
 CMD ["/usr/sbin/apache2ctl", "-D","FOREGROUND"] #запусить как демон
 EXPOSE 80 # на 80 порт
 #-----------------------------------------------------------------------------
@@ -64,3 +60,436 @@ docker run -d -p 7878:80 name:v3 # запуститть контейнер
 
 docker login
 docker push # пушить в репу на докер хабе
+#--------------------------------------------------------------------------------
+#
+#  Докер фаил с приложением на flask и его разбор
+#
+#---------------------------------------------------------------------------------
+$ cat Dockerfile
+FROM python:3.7.3-alpine #запускать имедж python:3.7.3-alpine 
+ENV APP_HOME /app
+WORKDIR $APP_HOME
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+ENTRYPOINT [ "python" ] # запускаеть программу ENTRYPOINT 
+CMD [ "app.py" ] # запускает аргументы команды ENTRYPOINT
+#-------------------------------------------------------------------- 
+Если не указать в Dockerfile ENTRYPOINT, будет использовано следующее
+значение по умолчанию: /bin/sh -c.
+#---------------------------------------------------------------------
+$ docker build -t hello-world-docker # создаст образ докера для приложения
+$ docker images hello-world-docker # показывает образы докер приложения
+$ docker run --rm -d -v `pwd`:/app -p 5000:5000 hello-world-docker
+Разбор команды:
+Аргумент --rm указывает серверу Docker на необходимость удалить этот
+контейнер по завершении его выполнения. Удобная возможность для предот-
+вращения захламления локальной файловой системы
+#--------------------------
+Аргумент -d указывает серверу Docker, что этот контейнер нужно запустить
+в фоновом режиме.
+#--------------------------
+С помощью аргумента -v текущий каталог (pwd) привязывается к каталогу
+/app внутри контейнера Docker, что важно для технологического процесса
+локальной разработки, поскольку позволяет редактировать файлы приложе-
+ния на локальной машине с автоматической перезагрузкой их сервером для
+разработки Flask, запущенным внутри контейнера.
+#----------------------------
+Аргумент -p 5000:5000 привязывает первый (локальный) из указанных пор-
+тов (5000) ко второму порту (5000) внутри контейнера.
+#----------------------------------------------------
+
+
+$ docker ps
+CONTAINER ID IMAGE                      COMMAND        CREATED
+c879295baa26 hello-world-docker:latest "python app.py" 4 seconds ago
+STATUS PORTS NAMES
+Up 2 seconds 0.0.0.0:5000->5000/tcp flamboyant_germain
+
+$ docker logs c879295baa26
+
+$ curl http://127.0.0.1:5000
+Hello, World! (from a Docker container)%
+
+
+$ cat app.py
+from flask import Flask
+app = Flask(__name__)
+@app.route('/')
+def hello_world():
+return 'Hello, World! (from a Docker container)'
+if __name__ == '__main__':
+app.run(debug=True, host='0.0.0.0')
+
+Нам также понадобится файл requirements.txt, где будет указана версия пакета
+Flask, которую необходимо установить с помощью pip
+
+$ cat requirements.txt
+Flask==1.0.2
+psycopg2==2.7
+redis==3.2.1
+rq==1.0
+
+
+#-----------------------------------
+#Завершает  выполнение контейнера
+#-----------------------------------
+docker kill
+docker stop
+
+$ docker stop c879295baa26
+$ docker rmi hello-world-docker # удалят образ докер с локального диска 
+
+griggheo/hello-world-docker # griggheo  - название репы////hello-world-docker название имеджа 
+
+
+$ docker tag hello-world-docker:latest griggheo/hello-world-docker:latest
+$ docker tag hello-world-docker:v1 griggheo/hello-world-docker:v1
+#-----------------------------------------------------------
+публикуем докер образ в репозиторий:
+$ docker push griggheo/hello-world-docker:latest
+$ docker push griggheo/hello-world-docker:v1
+
+#-------------------------------------------------------------------
+#
+#                       Docker compose
+#
+#
+#---------------------------------------------------------------------
+
+Для запуска нескольких контейнеров Docker, соответствующих различным
+частям приложения, применим команду compose
+
+При использовании Compose
+описание и настройка составляющих приложение сервисов производятся
+в файле YAML, после чего эти сервисы, работающие в контейнерах Docker,
+создаются, запускаются и останавливаются с помощью утилиты командной
+строки docker-compose.
+
+Вот как можно описать внутри файла docker-compose.yaml запуск PostgreSQL в контейнере Docker:
+#-------------------------------------------------------------
+
+$ cat docker-compose.yaml
+version: "3"
+services:
+db:
+image: "postgres:11"
+container_name: "postgres"
+ports:
+- "5432:5432"
+volumes:
+- dbdata:/var/lib/postgresql/data
+volumes:
+dbdata:
+environment:
+POSTGRES_HOST_AUTH_METHOD: "trust"
+
+В нем описывается сервис db, в основе которого лежит опубликованный
+в Docker Hub образ контейнера postgres:11.
+
+Задается соответствие локального порта 5432 порту 5432 контейнера.
+
+Задается том Docker для каталога, в котором PostgreSQL будет хранить
+свои данные, — /var/lib/postgresql/data. Благодаря этому хранимые
+в PostgreSQL данные не потеряются при перезапуске контейнера.
+#-------------------------------------------------------
+
+$ docker-compose up -d db # запустит в фоновом режиме (флаг -d) контейнер Docker для сервиса db1
+$ docker-compose logs db
+
+#-------------------------------------------------------------
+Выполнение команды docker volume ls продемонстрирует том dbdata Docker,
+смонтированный к каталогу /var/lib/postgresql/data PostgreSQL
+
+$ docker volume ls | grep dbdata
+local               flask-by-example_dbdata
+
+#--------------------------------------------------------------------
+#
+#                             Примечание
+# Чтобы все работало, мне понадобилось также задать общий пароль для PostgreSQL
+# либо настроить ее использование без пароля, что можно сделать, например, внеся
+# в вышеупомянутый файл docker-compose.yaml следующее:
+environment: 
+POSTGRES_HOST_AUTH_METHOD: "trust"
+#
+#----------------------------------------------------------------------
+
+$ docker-compose exec db psql -U postgres #подключиться к ДБ 
+postgres=# create database wordcount;
+CREATE DATABASE
+
+postgres=# \l
+Подключаемся к базе данных wordcount и создаем роль wordcount_dbadmin для использования нашим приложением Flask:
+$ docker-compose exec db psql -U postgres wordcount
+wordcount=# CREATE ROLE wordcount_dbadmin;
+CREATE ROLE
+wordcount=# ALTER ROLE wordcount_dbadmin LOGIN;
+ALTER ROLE
+wordcount=# ALTER USER wordcount_dbadmin PASSWORD 'MYPASS';
+ALTER ROLE
+postgres=# \q
+
+#--------------------------------------------------------------------------------------
+$ cat Dockerfile
+
+FROM python:3.7.3-alpine
+ENV APP_HOME /app
+WORKDIR $APP_HOME
+COPY requirements.txt .
+RUN \
+apk add --no-cache postgresql-libs && \
+apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev && \
+python3 -m pip install -r requirements.txt --no-cache-dir && \
+apk --purge del .build-deps
+COPY . .
+ENTRYPOINT [ "python" ]
+CMD ["app.py"]
+
+#-------------------------------------------------------------------------------------------------
+Опишите в файле docker-compose.yaml новый сервис migrations, задайте для
+него image, command, переменные среды (environment) и укажите, что для него
+требуется, чтобы сервис db был запущен и работал
+#------------------------------------------------
+$ cat docker-compose.yaml
+version: "3"
+services:
+migrations:
+image: "flask-by-example:v1"
+command: "manage.py db upgrade"
+environment:
+APP_SETTINGS: config.ProductionConfig
+DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+depends_on:
+- db
+db:
+image: "postgres:11"
+container_name: "postgres"
+ports:
+- "5432:5432"
+volumes:
+- dbdata:/var/lib/postgresql/data
+volumes:
+dbdata:
+#-----------------------------------------------
+Определение переменной DATABASE_URL ссылается на другую переменную —
+DBPASS, вместо того чтобы жестко «зашивать» пароль пользователя wordcount_
+dbadmin. Обычно файл docker-compose.yaml вносится в систему контроля версий,
+и рекомендуется не отправлять в GitHub секретные данные, такие как учетные
+данные БД. Вместо этого для работы с файлами, содержащими секретные
+данные, стоит задействовать утилиты шифрования, например sops ( https://
+github.com/mozilla/sops)
+
+$ sops --pgp BBDE7E57E00B98B3F4FBEAF21A1EEF4263996BD0 environment.secrets
+export DBPASS=MYPASS
+$ sops -d environment.secrets # для расшифровки 
+#---------------------------------------------------------------------
+Наша цель — запустить сервис migrations, описанный ранее в файле docker-
+compose.yaml. Связать метод управления секретными данными sops с docker-
+compose, расшифровать файл environments.secrets с помощью sops -d, отпра-
+вить с помощью команды source его содержимое в виртуальную среду текущей
+командной оболочки, после чего вызвать docker-compose up -d migrations,
+и все это — в однострочной команде, чтобы секретные данные не отображались
+в истории командной оболочки
+
+$ source <(sops -d environment.secrets); docker-compose up -d migrations
+#-------------------------------------------------------------------------
+#
+#
+#                    Добавляем сервис редис в compose.yml
+
+#                   
+#
+#
+#-----------------------------------------------------------------------------
+
+$ cat docker-compose.yaml
+version: "3"
+services:
+migrations:
+image: "flask-by-example:v1"
+command: "manage.py db upgrade"
+environment:
+APP_SETTINGS: config.ProductionConfig
+DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+depends_on:
+- db
+db:
+ image: "postgres:11"
+ container_name: "postgres"
+ ports:
+  - "5432:5432"
+ volumes:
+- dbdata:/var/lib/postgresql/data
+volumes:
+ dbdata:
+redis:
+ image: "redis:alpine"
+ ports:
+  - "6379:6379"
+
+$ docker-compose up -d redis
+
+Следующий шаг — создание сервиса worker для процесса-исполнителя на основе Python RQ в файле docker-compose.yaml
+$ cat docker-compose.yaml
+version: "3"
+services:
+migrations:
+image: "flask-by-example:v1"
+command: "manage.py db upgrade"
+environment:
+APP_SETTINGS: config.ProductionConfig
+DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+depends_on:
+- db
+db:
+ image: "postgres:11"
+ container_name: "postgres"
+ ports:
+  - "5432:5432"
+ volumes:
+- dbdata:/var/lib/postgresql/data
+volumes:
+ dbdata:
+redis:
+ image: "redis:alpine"
+ ports:
+  - "6379:6379"
+worker:
+ image: "flask-by-example:v1"
+ command: "worker.py"
+ environment:
+  APP_SETTINGS: config.ProductionConfig
+  DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+  REDISTOGO_URL: redis://redis:6379
+ depends_on:
+  - db
+  - redis 
+#-----------------------------------------------------------
+$ docker-compose up -d worker
+$ docker-compose logs worker
+
+А теперь запустите основное приложение Flask в его собственном контейнере.
+Создайте новый сервис app в файле docker-compose.yaml
+$ cat docker-compose.yaml
+version: "3"
+services:
+app:
+ image: "flask-by-example:v1"
+ command: "manage.py runserver --host=0.0.0.0"
+ ports:
+  - "5000:5000"
+ environment:
+  APP_SETTINGS: config.ProductionConfig
+  DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+  REDISTOGO_URL: redis://redis:6379  
+ depends_on:
+  - db
+  - redis
+worker:
+ image: "flask-by-example:v1"
+ command: "worker.py"
+ environment:
+  APP_SETTINGS: config.ProductionConfig
+  DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+  REDISTOGO_URL: redis://redis:6379
+ depends_on:
+  - db
+  - redis
+migrations:
+ image: "flask-by-example:v1"
+ command: "manage.py db upgrade"
+ environment:
+   APP_SETTINGS: config.ProductionConfig
+   DATABASE_URL: postgresql://wordcount_dbadmin:$DBPASS@db/wordcount
+ depends_on:
+   - db
+db:
+ image: "postgres:11"
+ container_name: "postgres"
+ ports:
+  - "5432:5432"
+ volumes:
+  - dbdata:/var/lib/postgresql/data
+redis:
+ image: "redis:alpine"
+ ports:
+  - "6379:6379"
+volumes:
+ dbdata:
+
+
+#---------------------------------------------------------
+docker-compose logs без # аргументов позволяет просмотреть журналы всех сервисов, описанных в файле docker-compose.yaml
+$ docker tag flask-by-example:v1 griggheo/flask-by-example:v1
+$ docker push griggheo/flask-by-example:v1
+
+Для перезапуска локальных контейнеров Docker выполните команду
+$ docker-compose down
+$ source <(sops -d environment.secrets); docker-compose up -d
+#-----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

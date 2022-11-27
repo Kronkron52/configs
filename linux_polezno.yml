@@ -1,0 +1,19 @@
+
+
+$ dd if=/dev/zero of=/dev/sdc count=10 bs=100M
+10+0 records in
+10+0 records out
+1048576000 bytes (1.0 GB, 1000 MiB) copied, 1.01127 s, 1.0 GB/s
+#Она делает десять записей по 100 Мбайт со скоростью 1 Гбайт/с, измеряя таким
+#образом пропускную способность. Простейший способ получить значение IOPS
+#количество операций ввода/вывода в секунду (IOPS).
+#
+#
+#
+#
+$ iostat -d /dev/sdc 1
+Device   tps           kB_read/s  kB_wrtn/s   kB_read   kB_wrtn
+sdc      6813.00        0.00      1498640.00    0       1498640
+Device   tps       kB_read/s   kB_wrtn/s     kB_read    kB_wrtn
+sdc     6711.00      0.00       1476420.00       0       420
+#tps (transactions per second — транзакций в секунду) — то же самое, что и IOPS.
