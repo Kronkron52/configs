@@ -78,6 +78,30 @@ SELECT ID, Name, BrithDate FROM Persons WHERE FILIALID <> 1 ORDER BY BirthDay de
 SELECT * FROM Persons WHERE FILIALID = 1 OR FILIALID = 2 ORDER BY BirthDay # филиал 1 или 2 
 SELECT * FROM Persons WHERE FILIALID = 1 OR FILIALID END Birthday > 1970 ORDER BY BirthDay
 #-----------------------------------------------------------------------------------------------------------------
+Операторы в SQL 
+SELECT * FROM Pesons WHERE FiliaID IN (1,2) # вхождение в множество 1 или 2 
+SELECT * FROM Pesons WHERE FiliaID IN (1,2,23,54,123,34)
+SELECT * FROM Pesons WHERE FiliaID NOT IN (1,2,23,54,123,34) # значение не входит в множество 
+SELECT * FROM Pesons WHERE Name = 'text' # текст пишется в одинарных ковычках ВСЕГДА 
+SELECT * FROM Pesons WHERE BirthDay >= '01.02.1980' # сравнивать с датой ( не явное преобразование )
+SELECT * FROM Pesons WHERE BirthDay >= to_date ('01.02.1980', 'dd.mm.yyyy') # использовать функция даты, и использовать формат даты
+#-----------------------
+SELECT * 
+FROM Pesons 
+WHERE BirthDay >= to_date ('01.02.1980', 'dd.mm.yyyy')
+AND BirthDay <= ta_date ('01.02.1985', 'dd.mm.yyyy')
+#-----------------------
+SELECT * FROM Pesons WHERE BirthDay BETWEEN to_date ('01.02.1980', 'dd.mm.yyyy') AND BirthDay ta_date ('01.02.1985', 'dd.mm.yyyy')
+BETWEEN # функция между 
+#----------------------------
+SELECT * FROM Pesons WHERE NAME LIKE '%text#' # найти текст КАК text 
+LIKE # как, как вот это значение text 
+% # любой 
+
+
+
+
+
 
 
 
