@@ -46,3 +46,123 @@ kubectl exec -it pod_name --bin/bash
 
 
 
+
+
+
+#-------------------------------------------------------------------
+#
+#
+#
+#                     Управление кластерами кубернетиса 
+#
+#
+#
+#--------------------------------------------------------------------
+Подготовка к установке кубернетиса
+setenforce 0 # отключить SELinux  
+systemctl disable firewalld && systemctl stop firewalld
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+yum install -y docker kubelet kubeadm kubectl kubernetes-cni
+systemctl enable docker && systemctl start docker
+systemctl enable kubelet && systemctl start kubelet
+sysctl -w net.bridge.bridge-nf-call-iptables=1 # включить сетевой параметр 
+echo "net.bridge.bridge-nf-call-iptables=1" > /etc/sysctl.d/k8s.conf # включить сетевой параметр 
+swapoff -a && sed -i '/ swap / s/^/#/' /etc/fstab # отключить свап
+Прописать DNS либо на сервере днс либо в host
+192.168.64.138 master.k8s
+192.168.64.139 node1.k8s
+192.168.64.140 node2.k8s # на каждом узле кластера 
+
+kubeadm init # на мастере 
+kubeadm join --token # в выводе инит будет токен
+
+ vim /etc/kubernetes/admin.conf #конфигурируем admin.conf для настройки kubectl под кластер
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+kubectl config set-cluster my-other-cluster # добавить кластер, если кластер уже есть с таким именем он перезапишется 
+➥ --server=https://k8s.example.com:6443
+➥ --certificate-authority=path/to/the/cafile
+
+kubectl config set-credentials foo --username=foo --password=pass # добавить юзера 
+kubectl config set-credentials foo --token=mysecrettokenXFDJIQ1234 #  авторизация по токену
+
+kubectl config set-context some-context --cluster=my-other-cluster
+➥ --user=foo --namespace=bar #  используется для создания нового контекста, связывающего кластер и созданного пользователя
+kubectl config current-context # Имя текущего контекста namespace 
+kubectl config set-context minikube --namespace=another-namespace #  изменить пространство имен
+
+СОВЕТ. Для того чтобы легко переключаться между пространствами имен, опре-
+делите такой псевдоним: alias kcd='kubectl config set-context $(kubectl config current-context) --namespace', 
+после чего можно переключаться между пространствами имен с помощью kcd somenamespace.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
