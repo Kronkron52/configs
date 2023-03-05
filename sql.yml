@@ -20,7 +20,7 @@ CREATE # создание объекта база данных ( таблица 
 ALTER # изменить объект базы данных 
 DROP # удаление объекта 
 
-TCL # Transaction comtrol language команда управления транзациями
+TCL # Transaction control language команда управления транзациями
 
 
 
@@ -75,7 +75,8 @@ SELECT ID, Name, BrithDate FROM Persons WHERE FILIALID <> 1 ORDER BY BirthDay # 
 SELECT ID, Name, BrithDate FROM Persons WHERE FILIALID <> 1 ORDER BY BirthDay desc # показать самых молодых сотрудников 
 Обратный порядок
 
-SELECT * FROM Persons WHERE FILIALID = 1 OR FILIALID = 2 ORDER BY BirthDay # филиал 1 или 2 
+SELECT * FROM Persons WHERE FILIALID = 1 OR FILIALID = 2 ORDER BY BirthDay
+SELECT * FROM Persons WHERE FILIALID = 1 AND FILIALID = 2 ORDER BY BirthDay # филиал 1 или 2 
 SELECT * FROM Persons WHERE FILIALID = 1 OR FILIALID END Birthday > 1970 ORDER BY BirthDay
 #-----------------------------------------------------------------------------------------------------------------
 Операторы в SQL 
@@ -120,6 +121,102 @@ LIKE # как, как вот это значение text
 
 
 
+
+
+
+
+
+
+#-------------------------------------------------------------------
+                      Переменные в select
+#
+#
+#
+#-------------------------------------------------------------------
+MANAGERS - таблица ( пример )
+#Одна переменная 
+select * form MANAGERS t
+
+DECLARE
+ vManagerName VARCHAR(100); # - переменная имеет 100 символов
+
+BEGIN
+  SELECT m.full.name
+     INTO vManagerName
+     FROM Managers m
+    WHERE m.Managerid = 5;
+   
+
+    DBSM_OUTPUT.put_line ('Manager = ' || vManagerName ); # вывести рельзутат    
+END;
+
+
+#Две переменные 
+select * form MANAGERS t
+
+DECLARE
+ vManagerName VARCHAR(100); # - переменная имеет 100 символов
+ vFilialid Numvber(100);   # вторая переменная имеет 100 символов 
+ VClien
+
+BEGIN
+  SELECT m.full.name, m.filialid
+     INTO vManagerName, vFilialid # Блок INTO  позволяет закидывать инфу в переменные 
+     FROM Managers m
+    WHERE m.Managerid = 5;
+   
+
+    DBSM_OUTPUT.put_line ('Manager = ' || vManagerName || ', ФилиалID = ' || vFilialid ); # вывести рельзутат    
+END;
+
+
+
+
+#-------------------------------------------------------------------
+
+
+select * form MANAGERS t
+
+DECLARE
+ vManagerName VARCHAR(100); # - переменная имеет 100 символов
+
+BEGIN
+   BEGIN
+   SELECT m.full.name
+      INTO vManagerName
+      FROM Managers m
+     WHERE m.Managerid = 500;
+  EXCEPTION
+     WHEN NO_DATA_FOUND THEN  # ошибка нет значения, чтобы такого не было делаем вложение бегин 
+      vManagerName := NULL;
+  END; 
+    IF vManagerName is null then
+    
+
+
+    end if;
+    DBSM_OUTPUT.put_line ('Manager = ' || NVL(vManagerName, '<нет>') ); # вывести рельзутат    
+END;
+
+#----------------------------------------ВАРИАНТ 2----------------------------------------
+select * form MANAGERS t
+
+DECLARE
+ vManagerName VARCHAR(100); # - переменная имеет 100 символов
+
+BEGIN
+  
+   SELECT MAX(m.full.name)  # функция макс, тогда ошибки не будет 
+      INTO vManagerName
+      FROM Managers m
+     WHERE m.Managerid = 500;
+  
+    
+
+
+    end if;
+    DBSM_OUTPUT.put_line ('Manager = ' || NVL(vManagerName, '<нет>') ); # вывести рельзутат    
+END;
 
 
 
