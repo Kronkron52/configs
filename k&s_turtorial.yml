@@ -1,0 +1,445 @@
+Kubernetis tutorial
+#------------------------------
+#
+#       Основные понятия
+#
+#-------------------------------
+pod #рабочая среда для контейнеров
+1 pod = 1 container
+apiVersion – версия API, которая вместе с типом объекта однозначно определяет конкретную схему объекта. 
+kind – тип объекта
+metadata – метаданные
+name - некоторый идентификатор объекта, по которому Kubernetes понимает, какой объект меняется
+labels, annotations - метки и аннотации
+spec – спецификация желаемого состояния объекта.  Для каждого типа объекта она своя
+status - текущие состояние объекта
+Селекторы – это выражения, позволяющие выбрать объекты по меткам
+Метки (labels) – это значения типа ключ-значение, которые связаны с конкретным ресурсом (объектом) Kubernetes
+
+
+
+
+
+#------------------------------
+Взаимодействие модулей между собой реализует вид объектов Kubernetes — Service (сервис)#####.
+Service – это объект Kubernetes, который описывает некоторый набор подов в качестве сетевого сервиса, а также способ доступа к этому сетевому сервису
+service: #  имеет статичные настройки для контейнеров
+
+сервис бывает external and internal:
+external - внешний URL application # https://my-app.com
+ingress # балансировщик запросов внутри кластера k&s
+#Ingress — это объект Kubernetes, в котором описываются правила маршрутизации клиентского трафика
+ingress - входящий трафик
+egress - исходящий трафик 
+
+selector — определяет, какой набор под попадет под управление сервиса
+ports.port — порт сервиса, запросы на который будут проксироваться на ports.targetPort
+ports.targetPort — порт пода, на котором отвечает приложение
+type — типа сервиса. Определяет каким образом можно получить доступ к сервису: 
+ClusterIP — по внутреннему IP в кластере
+NodePort — по порту на ноде кластера
+LoadBalancer — по какому-то внешнему, по отношению к кластеру, IP.
+список конкретных ip подов, на которые будет направляться трафик в поле Endpoints
+
+kubectl describe service hello-service #  состояние сервиса 
+
+#------------------------------------------------------------
+config map and secret:
+config map # внешняя конфигурация для вашего приложения
+secret #компонент кубера для кредов base64 encoded format
+env - массив пар типа ключ-значение, где ключом является имя переменной окружения, а значением - ее значение.
+ConfigMap - для хранения конфигураций 
+Secret - для хранения потенциально чувствительной информации (например, логин пароль для подключения к базе данных)
+Secret отличается от ConfigMap только тем, что данные в нем хранятся по умолчанию в закодированном (base64), но не зашифрованном виде
+Все секреты и конфигмапы привязываются к конкретному пространству имен
+Использовать созданные ConfigMap и Secret возможно следующим образом:
+
+передавать значения из ConfigMap/Secret в виде переменных окружения
+передавать значения из Configmap/Secret в виде примонтированной директории внутрь контейнера
+
+#---------------------------------------------------------------------
+volumes: # дата хранится снаружи кластера куба
+        # дата может хранится локально, главное чтобы не кластере
+        # подключается к кластеру куба
+
+deployment: # несколько подов app, дата не конфигрурируется в деплое
+# Объект Kubernetes, отвечающий за запуск и поддержание работы нужного количества модулей, называется 
+Deployment:
+Deployment – это объект Kubernetes, который описывает в скольких экземплярах запущен сервис, а также стратегию обновления на новую версию
+replicas — желаемое количество экземпляров сервиса
+selector — селектор для подов, которые будут находиться под управлением деплоймента
+strategy — стратегия обновления и ее настройки 
+template — это шаблон пода, по которому будут создаваться поды
+Стратегии обновления:
+Recreate - пересоздание. Сначала все старые поды удаляются. Как только поды были удалены, создаются новые в нужном количестве. 
+Такая стратегия приводит к простою приложения, поэтому используется редко
+RollingUpdate - постепенное обновление. Удаляются старые поды и создаются новые постепенно, так, 
+чтобы в любой момент времени несколько под были доступны
+spec.strategy.rollingUpdate.maxUnavailable: - это опциональное поле в описании настроек стратегии RollingUpdate
+#-------------------------------------------------------------------------------------------------------------------------------------------------
+#Оно описывает максимальное количество подов, которое может быть недоступно во время процесса обновления в виде процента от общего количества, 
+#либо в абсолютном выражении. Например, если значение этого параметра выставлено в 30%, то это означает, что контроллер сразу же может потушить 
+#30% старых под, не дожидаясь, пока поднимутся новые, и, как только новые поды буду подниматься и готовы принимать трафик, 
+#контроллер и дальше может старые тушить, оставляя общее количество доступных под не меньше 70%
+#----------------------------------------------------------------------------------------------------------------------------------------
+spec.strategy.rollingUpdate.maxSurge: - это опциональное поле в описании настроек стратегии RollingUpdate
+#------------------------------------------------------------------------------------------------------------------------------------------
+#Оно описывает, на какое количество под контроллер может превысить желаемое значение реплик (экземпляров) во время обновления. 
+#Оно может выражаться как в процентах от общего количества, так и в абсолютном выражении. Например, 
+#если значение этого параметра выставлено в 30%, то это означает, что контроллер может, не дожидаясь момента, как будут удалены старые поды, 
+#создать новых под столько, чтобы общее количество старых и новых не превышало 130% от желаемого числа под. 
+#------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------
+statefulSet # компонент для databases  несколько дб
+#----------------------------------------------------------------------------------------
+# 
+#
+#                    Основы архитектуры кубернетиса
+#
+#
+#-----------------------------------------------------------------------------------------
+3 master - 4 node
+container runtime #должен быть на всех надох
+kubelet #для получения команд от мастера
+kuby proxy # для инет
+kubectl edit deployment nginx-depl # откроется ямл манифест деплоймента
+kubectl logs pod_name
+kubectl discrabe pod [pod name]
+kubectl exec -it pod_name --bin/bash
+
+
+
+
+
+
+
+#-------------------------------------------------------------------
+#
+#
+#
+#                     Управление кластерами кубернетиса 
+#
+#
+#
+#--------------------------------------------------------------------
+Подготовка к установке кубернетиса
+setenforce 0 # отключить SELinux  
+systemctl disable firewalld && systemctl stop firewalld
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+yum install -y docker kubelet kubeadm kubectl kubernetes-cni
+systemctl enable docker && systemctl start docker
+systemctl enable kubelet && systemctl start kubelet
+sysctl -w net.bridge.bridge-nf-call-iptables=1 # включить сетевой параметр 
+echo "net.bridge.bridge-nf-call-iptables=1" > /etc/sysctl.d/k8s.conf # включить сетевой параметр 
+swapoff -a && sed -i '/ swap / s/^/#/' /etc/fstab # отключить свап
+Прописать DNS либо на сервере днс либо в host
+192.168.64.138 master.k8s
+192.168.64.139 node1.k8s
+192.168.64.140 node2.k8s # на каждом узле кластера 
+
+kubeadm init # на мастере 
+kubeadm join --token # в выводе инит будет токен
+
+ vim /etc/kubernetes/admin.conf #конфигурируем admin.conf для настройки kubectl под кластер
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+kubectl config set-cluster my-other-cluster # добавить кластер, если кластер уже есть с таким именем он перезапишется 
+➥ --server=https://k8s.example.com:6443
+➥ --certificate-authority=path/to/the/cafile
+
+kubectl config set-credentials foo --username=foo --password=pass # добавить юзера 
+kubectl config set-credentials foo --token=mysecrettokenXFDJIQ1234 #  авторизация по токену
+
+kubectl config set-context some-context --cluster=my-other-cluster
+➥ --user=foo --namespace=bar #  используется для создания нового контекста, связывающего кластер и созданного пользователя
+kubectl config current-context # Имя текущего контекста namespace 
+kubectl config set-context minikube --namespace=another-namespace #  изменить пространство имен
+
+СОВЕТ. Для того чтобы легко переключаться между пространствами имен, опре-
+делите такой псевдоним: alias kcd='kubectl config set-context $(kubectl config current-context) --namespace', 
+после чего можно переключаться между пространствами имен с помощью kcd somenamespace.
+
+
+
+
+
+#-------------------------------------------------------------
+#
+#
+# взаимодействие с кубернетес через curl 
+#
+#
+#
+#--------------------------------------------------------------
+Для создания ресурса мы должны сделать POST запрос на URL коллекции
+Для получения ресурса GET
+Для изменения - PATCH
+Для удаления - DELETE 
+curl -s 127.0.0.1:8080/api/v1/nodes/$HOSTNAME/ | jq
+curl -v -X POST -H "Content-Type: application/json" http://127.0.0.1:8080/api/v1/namespaces/default/pods -d@hello-service.json
+curl -s 127.0.0.1:8080/api/v1/events  | jq '.items[] | {message: .message, component: .source.component} | select(.message | index("hello"))'
+curl -s 127.0.0.1:8080/api/v1/namespaces/default/pods/hello-demo | jq
+curl -X DELETE 127.0.0.1:8080/api/v1/namespaces/default/pods/hello-demo
+curl 127.0.0.1:8080/api/v1/namespaces/default/pods/hello-demo | jq
+curl -s 127.0.0.1:8080/api/v1/events  | jq '.items[] | {message: .message, component: .source.component} | select(.message | index("hello"))'
+#-------------------------------------------------------------
+#
+#
+# взаимодействие с кубернетес через kubectl
+#
+#
+#
+#--------------------------------------------------------------
+kubectl cluster-info
+kubectl api-resources
+kubectl get nodes
+kubectl get componentstatus  #статус управляющих компонент
+kubectl get namespaces
+kubectl get node $HOSTNAME
+kubectl get nodes $HOSTNAME -o json
+kubectl get nodes $HOSTNAME -o yaml
+kubectl describe node $HOSTNAME
+kubectl get deploy hello-deployment
+
+
+
+
+
+
+
+#------------------------------------------------------------------
+kubectl get pod -l app=hello-demo # параметр позволяет фильтровать все объекты, имеющие соответствующие метки
+kubectl get pod -l app=hello-demo -o jsonpath="{.items[0].metadata.name}" # jsonpath выведем имя первого пода из списка
+POD_NAME=$(kubectl get pod -l app=hello-demo -o jsonpath="{.items[0].metadata.name}")
+kubectl delete pod $POD_NAME --wait=false # --wait=false опция, которая позволяет не дожидаться удаления пода
+#------------------------------------------------------------------
+
+
+
+Сокращения:
+kubectl get no
+kubectl get ns
+kubectl get no $HOSTNAME
+kubectl api-resources
+kubectl get no,ns
+kubectl get pod -n kube-system  #получить список объектов типа Pod в пространстве имен kube-system
+kubectl get pod -n default
+kubectl get pod
+kubectl get pods -owide # Параметр -o wide используется для расширенного вывода
+kubectl config set-context --current --namespace=kube-system # изменим текущий namespace на kube-system 
+kubectl create ns myapp #Создадим новое пространство имен myapp
+kubectl create namespace myapp
+kubectl create -f {файл с описанием объекта} для создания объектов
+kubectl apply -f {файл с описанием объекта} для обновления объектов
+kubectl apply -f pod.yaml
+kubectl delete -f {файл с описанием объекта} для удаления объекта
+kubectl create -f hello-service.json
+kubectl get pod hello-demo
+kubectl delete -f hello-service.json
+kubectl logs hello-demo  #посмотреть логи контейнера внутри пода
+kubectl exec -it hello-demo -- /bin/bash
+kubectl describe pod hello-demo
+kubectl get -o jsonpath='{.status.podIP}' pod hello-demo #вывести только IP пода hello-demo такой командой
+POD_IP=$(kubectl get -o jsonpath='{.status.podIP}' pod hello-demo) #сохраним IP пода в переменную POD_ID
+curl http://$POD_IP:8000/
+curl http://$POD_IP:8000/version
+kubectl delete pod hello-demo #удалить под
+kubectl delete ns myapp  --wait=false #Удаление пространства имен
+
+императивные команды:
+kubectl run hello-demo --image=schetinnikov/hello-app:v1
+kubectl scale deploy/hello-deployment --replicas=2 #масштабировать деплоймент с помощью императивной команды kubectl scale
+kubectl expose deployment hello-deployment --type=ClusterIP --name=hello-service-2 # создадим сервис с именем hello-service-2 для нашего деплоймента hello-deployment
+kubectl describe svc hello-service-2
+Создание ConfigMap из командной строки:
+kubectl create configmap hello-config-literal --from-literal=GREETING=Preved --from-literal=GREETING2=ALLOHA
+kubectl describe configmap hello-config-literal
+kubectl create secret generic hello-secret-literal --from-literal=PASSWORD=SuperCoolPassword2
+kubectl get secret hello-secret-literal -o jsonpath="{.data.PASSWORD}"
+
+
+
+
+
+
+
+
+
+
+Обновление деплоймента с помощью kubectl set image и kubectl rollout undo:
+kubectl set image deploy/hello-deployment hello-demo=schetinnikov/hello-app:v2
+kubectl get pods -l app=hello-demo
+А чтобы откатить kubect rollout undo:
+kubectl rollout undo deploy/hello-deployment
+
+
+ 
+
+ 
+
+
+#-----------------------------------------------------------------------------------------
+#
+#
+#                  Примеры example
+#
+#
+#-----------------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-demo
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: hello-demo
+    spec:
+      containers:
+        - name: hello-demo
+          image: schetinnikov/hello-app:v1
+          ports:
+            - containerPort: 8000
+ 
+
+
+
+kubectl get service hello-service -o json | jq
+kubectl get service hello-service -o jsonpath="{.spec.clusterIP}" # Смотрим, где именно в json находится информация с ClusterIP.
+#                                                                                И через jsonpath запрашиваем только его
+CLUSTER_IP=$(kubectl get service hello-service -o jsonpath="{.spec.clusterIP}") # Сохраняем в переменную окружения:
+echo $CLUSTER_IP
+curl http://$CLUSTER_IP:9000/ #  обратимся к ClusterIP по 9000 порту
+while true; do curl http://$CLUSTER_IP:9000/ ; echo ''; sleep .5; done #  запустим в цикле
+
+
+kubectl get service hello-service -o json | jq
+kubectl get service hello-service -o jsonpath="{.spec.ports[0].nodePort}"
+NODE_PORT=$(kubectl get service hello-service -o jsonpath="{.spec.ports[0].nodePort}")
+curl http://$HOSTNAME:$NODE_PORT/
+
+
+EXTERNAL_IP=$(kubectl get service hello-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+while true; do curl http://$EXTERNAL_IP:9000/ ; echo ''; sleep .5; done
+
+
+kubectl run -it --rm busybox --image=busybox # перейти в контейнер пода 
+
+
+CLUSTER_IP=$(kubectl get service hello-service -o jsonpath="{.spec.clusterIP}") ; while true; do curl http://$CLUSTER_IP:9000/version ; echo ''; sleep .5; done
+#в бесконечном цикле начнем опрашивать наш сервис
+
+
+
+
+kubectl get -n kube-system pod -l app.kubernetes.io/name=nginx-ingress-controller -l app.kubernetes.io/component=controller
+#отфильтрует под ингресс контроллера по меткам app.kubernetes.io/name и app.kubernetes.io/component
+kubectl describe svc nginx-nginx-ingress-controller -n kube-system # посмотреть на настройки этого сервиса
+NGINX_EXTERNAL_IP=$(kubectl get service nginx-nginx-ingress-controller -n kube-system -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+#Сохраним значение внешнего IP в переменную окружения NGINX_EXTERNAL_IP
+curl $NGINX_EXTERNAL_IP/
+
+
+
+
+
+
+
+
+
+
+
+#-----------------------------------------------------
+#
+#
+#
+#      Теория   ingress 
+#
+#
+#
+#-------------------------------------------------------
+Меняем правила марутизация трафика
+Давайте поменяем правила маршрутизации так, чтобы все запросы к балансировщику на локейшен /myapp/ проксировались в hello-service на 9000 порт. 
+Для того, чтобы это реализовать на стороне балансера нужно будет перезаписывать локейшн и "отрезать" /myapp. 
+Сделать это можно с помощью директивы rewrite-target в nginx. Но этой директивы нет объекте типа Ingress. 
+Дополнительные настройки в Ingress можно передать с помощью аннотаций. 
+Для директивы rewrite-target нужно использовать аннотацию nginx.ingress.kubernetes.io/rewrite-target. 
+В нашем случае /$2 означает: "заменить локейшн на 2-ую группу из регулярного выражения /myapp($|/)(.*) - т.е. фактически отрезать часть /myapp($|/)". 
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - http:
+      paths:
+        - path: /myapp($|/)(.*)
+          pathType: Prefix
+          backend:
+            service:
+              name: hello-service
+              port:
+                number: 9000
+
+
+kubectl exec deploy/nginx-nginx-ingress-controller -n kube-system -- cat /etc/nginx/nginx.conf # можем посмотреть, как выглядит конфигурация балансировщика nginx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

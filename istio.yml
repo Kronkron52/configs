@@ -1,0 +1,415 @@
+#----------------------------------------------------------------
+#
+#
+#            Tutorial for istio
+#
+#
+#
+#----------------------------------------------------------------
+Envoy-proxy – является источником всех сетевых возможностей Istio. 
+Именно в нем программно реализовано все то, что предоставляет Istio в отношении сетевой логики
+
+
+
+Терминология Envoy
+Cluster: — логический сервис с набором эндпоинтов, на который Envoy совершает перенаправление запроса.
+Downstream: — сущность, которая инициирует соединение с Envoy и является источником запроса, она может быть представлена как приложением в том же поде, так и другим Envoy-прокси в service mesh или внешним сетевым узлом.
+Endpoints: — сетевые узлы, которые относятся к логическому сервису.
+Filter: — один из модулей, представляющий собой какой-либо аспект на пути установления соединения или обработки запроса, позволяющий вводить требуемое ограничение.
+Listener: — это модуль в Envoy, который принимает новое TCP-соединение (или UDP датаграммы) и оркеструет все аспекты (Filter), относящиеся к вызывающему узлу (Downstream) во время обработки запроса.
+Upstream: — эндпоинт или узел сети, с которым Envoy соединяется для перенаправления запроса, поступившего от Downstream.
+
+
+Управление трафиком
+Gateway CRD:
+Манифест Gateway конфигурирует изолированный envoy-proxy, который управляет всем входящим (ingress-шлюз) или исходящим (egress-шлюз) трафиком сети.
+
+
+VirtualService CRD:
+Манифест VirtualService определяет список правил маршрутизации трафика внутри service-mesh в привязке к имени вызываемого хоста.
+
+
+DestinationRule CRD:
+Манифест DestinationRule определяет политики управляющие трафиком после выполнения маршрутизации
+режим балансировки нагрузки на сервис назначения, в том числе на разные его версии;
+размер пула соединений прокси-сервера сервиса назначения (host в VirtualService);
+признаки пода с нарушенной работоспособностью и параметры вывода его из балансировки (5xx ошибки, время вывода из балансировки ...).
+
+
+ServiceEntry CRD:
+Манифест ServiceEntry позволяет внести новый сервис и service endpoint 
+(манифестация сервиса, позволяющая достичь его в сети) во внутренний реестр сервисов Istio и выполнить их конфигурацию
+
+направить трафик на сервисы вне service-mesh;
+задать параметры соединений (retry, timeout и т. д.).
+
+[2016-04-15T20:17:00.310Z]"POST /api/v1/locations HTTP/2" 204 - 154 0 226 100 "10.0.35.28"
+"nsq2http" "cc21d9b0-cf5c-432b-8c7e-98aeb7988cd2" "locations" 'tcp://10.0.2.1:80'
+
+
+
+1)Время с указанием миллисекунд: для HTTP-соединения — момент получения запроса, для TCP — время начала установления соединения с downstream. [2016-04-15T20:17:00.310Z]
+2)Значение HTTP-заголовка «method» в полученном запросе. В случае TCP-соединения будет указан «-». POST
+3)Значение HTTP-заголовка «path» в полученном запросе. В случае TCP-соединения будет указан «-». /api/v1/locations
+4)Версия протокола HTTP. В случае TCP-соединения — «-».  HTTP/2
+5)Код ответа HTTP. В случае TCP-соединения — «-». 204
+6)Флаги Envoy, детализирующие причину ошибки при установлении соединения или причину ошибочного ответа. - 
+7)При HTTP-соединении — объем информации в теле полученного запроса в байтах. При TCP — число байт полученной информации от downstream. 154
+8)При HTTP — объем информации в теле отправленного запроса в байтах, в случае WebSocket в эту величину будет также включен объем заголовков 
+отправленного запроса. При TCP — число байт отправленной информации в течение соединения. 0
+9)Продолжительность времени в миллисекундах. При HTTP — длительность обработки запроса от момента начала соединения до момента обработки последнего байта.
+При TCP — время соединения с downstream. 226 
+10)Значение HTTP-заголовка X-ENVOY-UPSTREAM-SERVICE-TIME в ответе: это значение соответствует длительности времени в миллисекундах, 
+затраченному на обработку запроса вызываемым upstream в сумме с время затратами на транспорт данных между Envoy и upstream в сети. 
+В случае TCP-соединения — «-». 100
+11)Значение HTTP-заголовка X-FORWARDED-FOR в полученном запросе: содержит список IP-адресов, через которые прошел запрос на пути от клиента к серверу, 
+включая IP-адрес клиента и адреса всех прокси-серверов на его пути. В случае TCP-соединения — «-». 10.0.35.28
+12)Значение HTTP-заголовка USER-AGENT запроса содержит короткое обозначение клиента, совершившего запрос. В случае TCP-соединения — «-». nsq2http
+13)Далее обозначено значение HTTP-заголовка X-REQUEST-ID в запросе, несущий в себе некий идентификатор запроса. В случае TCP соединения — «-». cc21d9b0-cf5c-432b-8c7e-98aeb7988cd2
+14)Значение HTTP-заголовка AUTHORITY в полученном запросе. В случае TCP-соединения — «-». locations
+15)URL-адрес upstream. 'tcp://10.0.2.1:80
+
+
+Архитектура сети с Istio
+В архитектуре сети service mesh существуют три изолированных контура сети: 
+внешняя, или открытая, сеть, граничащая с внутрисетевым пространством service mesh, которая, в свою очередь, является вторым сетевым контуром и
+содержит сущности развертки (deployment) оркестровщика сети. 
+Третий сетевой контур представляет собой локальную сеть внутри контейнера (например, Docker-контейнер) с бизнес-сервисом или прокси-сервером
+
+
+#----------------------------------------------------------------
+#
+#
+#            Practics
+#
+#
+#
+#----------------------------------------------------------------
+kubectl get pods --all-namespaces # показать все неймспейсы
+istioctl -c /etc/rancher/k3s/k3s.yaml install -y --set meshConfig.accessLogFile=/dev/stdout --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY --set values.pilot.resources.requests.memory=128Mi --set values.pilot.resources.requests.cpu=50m --set values.global.proxy.resources.requests.cpu=10m --set values.global.proxy.resources.requests.memory=32Mi
+meshConfig.accessLogFile=/dev/stdout - активации записи логов доступа Envoy каждого контейнера с прокси-сервером
+
+meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY - разрешаем прокси-сервером перенаправлять запросы на внешние хосты, 
+которые явно указаны во внутреннем реестре Istio. В ином случае, Istio позволит совершить исходящий запрос на любой хост
+
+
+kubectl create namespace dev-service-mesh # создать неймспейс 
+kubectl config set-context --current --namespace=dev-service-mesh # сделать dev-service-mesh пространством по умолчанию 
+kubectl config view --minify | grep namespace: # показать текущий неймспейс 
+kubectl label namespace dev-service-mesh istio-injection=enabled
+#настроим в пространсве имен dev-service-mesh автоматическое внедрение контейнера с прокси-сервером Envoy в каждый создаваемый под,
+#содержащий контейнер с бизнес-сервисом
+export POD_NAME=$(kubectl get pod -l app=service-b-app -o jsonpath="{.items[0].metadata.name}")
+kubectl logs $POD_NAME
+
+
+#---------------------------------------------------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b-deployment
+  labels:
+    app: service-b-app
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-b-app
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: service-b-app
+        version: v1
+    spec:
+      containers:
+        - name: service-b-container
+          image: artashesavetisyan/istio-basics-course:service-b
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          securityContext:
+            runAsUser: 1000
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: producer-internal-host
+spec:
+  ports:
+    - port: 80
+      name: http-80
+      targetPort: 8082
+  selector:
+    app: service-b-app
+
+
+
+
+
+Обратите внимание на значение ключа metadata.name - содержит имя хоста, по которому будет доступно внутри service mesh приложение, 
+имя которого указно в ключе spec.selector.app.
+
+Также следует учесть, что spec.ports[0].port (80) содержит номер порта, на котором будет доступен хост из metadata.name, 
+но трафик далее будет направлен на порт, указанный в значении ключа spec.ports[0].targetPort.
+#-----------------------------------------------------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: service-b-gw
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+
+
+Обратите внимание на значения ключей spec.selector.istio - содержит значение селектора istio, таким образом определяя свое действие на под, 
+имеющий подобный селектор (istio=ingressgateway).
+
+Ключ spec.servers[0].port.number содержит номер порта, который будет открыт у ingress-шлюза для приема входящих запросов,
+ а ключ spec.servers[0].hosts - имя хостов, которые могут быть запрошены.
+
+Рассмотрим детальное описание пода istio-ingressgateway, в том числе блок Labels, содержащий среди прочего - istio=ingressgateway:
+#-----------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+kubectl describe pod -l app=istio-ingressgateway -n istio-system
+kubectl apply -f service-b-gw.yml
+kubectl describe gateway.networking.istio.io service-b-gw
+
+
+
+
+
+
+#-----------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: inbound-to-service-b-vs
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - service-b-gw
+  http:
+    - match:
+        - uri:
+            exact: /service-b
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: producer-internal-host
+            port:
+              number: 80
+
+
+Обратите внимание на значения ключей spec.hosts, spec.gateways. Первый содержит список хостов, которые охватывает данное правило, 
+второй - список имен шлюзов, запросы из которых будут учтены данным правилом (здесь указано значение имени Gateway, созданного на предыдущем шаге).
+
+Ключ spec.http[0].match[0].uri.exact содержит значение HTTP заголовка path в запросе, он же определяет запрошенный путь, 
+в данном случае это - "/service-b".
+
+Ключ spec.http[0].rewrite.uri содержит то значение, на которое следует заменить значение заголовка path поступившего запроса, 
+в данном случае это "/", то есть запросы с путем "/service-b" будут направлены на корневой каталог ("/") хоста назначения.
+
+Ключ spec.http[0].route[0].destination.host содержит имя хоста назначения, в данном случае producer-internal-host - имя в манифесте Service
+
+Ключ spec.http[0].route[0].destination.port.number содержит значение порта упомянутого сервиса.
+
+Давайте применим inbound-to-service-b-vs.yml:
+#-----------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
+kubectl get svc istio-ingressgateway -n istio-system #  краткое описание манифеста Service ingress-шлюза
+export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+echo $GATEWAY_URL
+kubectl get pods --all-namespaces
+curl -v http://$GATEWAY_URL/service-b
+kubectl logs -l app=istio-ingressgateway -n istio-system -c istio-proxy # Проверим логи доступа Envoy ingress-шлюза:
+kubectl logs -l app=service-b-app -c istio-proxy # логи доступа Envoy в поде с бизнес сервисом
+
+
+
+
+
+#--------------------------------------------------------------------------------------
+#
+#
+#
+#                            Маршрутизация трафика внутри service mesh, исходящий трафик
+# 
+#
+#
+#---------------------------------------------------------------------------------------
+istioctl -c /etc/rancher/k3s/k3s.yaml install -y --set meshConfig.accessLogFile=/dev/stdout --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY --set values.pilot.resources.requests.memory=128Mi --set values.pilot.resources.requests.cpu=50m --set values.global.proxy.resources.requests.cpu=10m --set values.global.proxy.resources.requests.memory=32Mi  --set values.global.proxy.resources.limits.memory=64Mi --set values.pilot.resources.limits.memory=256Mi
+
+Активируем автоматическое внедрение контейнера с прокси-сервером Envoy в каждый создаваемый под в dev-service-mesh:
+kubectl label namespace dev-service-mesh istio-injection=enabled
+
+Доступ к ingress-шлюзу Istio:
+kubectl get svc istio-ingressgateway -n istio-system
+
+Экспортируем IP-адрес из этого ресурса в переменную:
+export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+То же самое сделаем для номера порта ingress-шлюза:
+export INGRESS_PORT=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
+
+Создадим переменную, содержащую извлеченные ранее данные:
+
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+echo $GATEWAY_URL
+
+логи доступа Envoy ingress-шлюза:
+kubectl logs -l app=istio-ingressgateway -n istio-system -c istio-proxy
+
+логи доступа Envoy в поде с бизнес сервисом:
+kubectl logs -l app=service-a-app -c istio-proxy
+
+#---------------------------------------------------------------------------------------------
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: producer-internal-host-vs
+spec:
+  hosts:
+    - producer-internal-host
+  gateways:
+    - mesh
+  http:
+    - route:
+        - destination:
+            host: producer-internal-host
+            port:
+              number: 80
+          weight: 50
+        - destination:
+            host: service-c-srv
+            port:
+              number: 80
+          weight: 50
+
+
+Блок spec.http[0].route содержит два вложенных блока destination с хостами producer-internal-host и service-c-srv, а также с ключами weight, \
+содержашими значания процентных долей для расщепления трафика и перенаправления всех поступивших на хост producer-internal-host (ключ spec.hosts) запросов.
+
+#---------------------------------------------------------------------------------------------
+Создание виртуального кластера external-cluste:
+Открытие исходящего трафика из dev-service-mesh:
+
+Существует 3 подхода к открытию исходящего трафика в Istio:
+
+1)Открытый доступ из любого пода на любой внешний хост по умолчанию - удобный подход для разработки, но не безопасный и не контролируемый,
+ поэтому в промышленной эксплуатации применяется редко.
+
+2)Отсутствие доступа на любой внешний хост исключая те, которые явно указаны в манифесте ServiceEntry.
+
+3)Направление трафика на внешний хост через единый egress шлюз - позволяет обогатить весь исходящий трафик из кластера требуемой логикой 
+(например обогатить заголовками для аутентификации запросов), мониторировать и контролировать его. Данный подход применяться в больших
+промышленных системах.
+
+
+Реализуем третий подход.
+
+Развернем egress-шлюз, выполнив команду авто-конфигруации Isto:
+istioctl -c /etc/rancher/k3s/k3s.yaml install -y --set components.egressGateways[0].name=istio-egressgateway --set components.egressGateways[0].enabled=true --set meshConfig.accessLogFile=/dev/stdout --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY --set values.pilot.resources.requests.memory=128Mi --set values.pilot.resources.requests.cpu=50m --set values.global.proxy.resources.requests.cpu=10m --set values.global.proxy.resources.requests.memory=32Mi --set values.global.proxy.resources.limits.memory=64Mi --set values.pilot.resources.limits.memory=256Mi
+
+Создадим манифест Gateway для исходящего трафика:
+kubectl apply -f service-ext-outbound-gw.yml
+
+
+#--------------------------------------------------------------------------------
+Ограничение числа запросов в единицу времени:
+
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: filter-local-rate-limit-ef
+  namespace: dev-service-mesh
+spec:
+  workloadSelector:
+    labels:
+      app: service-b-app
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.local_ratelimit
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              max_tokens: 1
+              tokens_per_fill: 1
+              fill_interval: 5s
+            filter_enabled:
+              runtime_key: local_rate_limit_enabled
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            filter_enforced:
+              runtime_key: local_rate_limit_enforced
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            response_headers_to_add:
+              - append: false
+                header:
+                  key: x-local-rate-limit
+                  value: 'true'
+            local_rate_limit_per_downstream_connection: false
+
+
+#---------------------------------------------------------------------------
+
+Ключи metadata.namespace и spec.workloadSelector.labels позволяют определить под, envoy-прокси которого должен применить конфигурации.
+
+Ключ spec.configPatches[0].patch.value содержит фильтр в формате API Envoy.
+
+Ключ spec.configPatches[0].patch.value.typed_config.token_bucket содержит ключи и значения, позволяющие настроить частоту допустимых запросов, 
+представляет из себя абстрактную "корзину токенов" или квот, также является реализацией алгоритма "Текущего ведра" или "Дырявого ведра". 
+Каждый поступающий запрос потребляет по одному токену.
+
+Рассмотрим ключи token_bucket:
+
+spec.configPatches[0].patch.value.typed_config.token_bucket.fill_interval - содержит значение временного интервала в секундах, по истечению которого, 
+корзина наполняется новыми токенами (выдаются очередные квоты на обработку запроса)
+
+spec.configPatches[0].patch.value.typed_config.token_bucket.max_tokens - максимальное число токенов, которая корзина может вместить, 
+также является изначальным числом токенов
+
+spec.configPatches[0].patch.value.typed_config.token_bucket.tokens_per_fill - чило токенов, которое добавляется при истечении временного интервала.
+
+Таким образом, для ограничения запросов до 100 tps (запросов в секунду), следует указать:
+max_tokens: 100
+tokens_per_fill: 100
+fill_interval: 1s
+
